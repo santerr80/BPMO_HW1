@@ -4,15 +4,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 columns = ["id", "y_true", "y_pred", "absolute_error"]
-    
+
 df = pd.DataFrame(columns=columns)
 
+
 def callback(ch, method, properties, body):
+    print("Received message:", body)  # Вывод содержимого body на экран
     data = json.loads(body)
-    
     df.loc[len(df)] = data
-    
-    # Создание и настройка гистрограммы
+
+    # Создание и настройка гистограммы
     plt.figure(figsize=(10, 6))
     plt.hist(df['absolute_error'], bins=10, edgecolor='black')
     plt.title('Histogram of Absolute Error')
@@ -25,18 +26,23 @@ def callback(ch, method, properties, body):
     plt.savefig(output_file)
     plt.close()
 
+
 # Работа с очередью plot
 try:
     # Создаём подключение к серверу на локальном хосте
     connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
     channel = connection.channel()
-    
+
     # Объявляем очередь plot
     channel.queue_declare(queue='plot')
-    
+
     # Извлекаем сообщение из очереди plot
     channel.basic_consume(
         queue='plot',
         on_message_callback=callback,
         auto_ack=True)
 
+    print('Waiting for messages. To exit press CTRL+C')
+    channel.start_consuming()
+except Exception as e:
+    print(e)
