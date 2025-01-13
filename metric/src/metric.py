@@ -12,7 +12,7 @@ def callback(ch, method, properties, body):
     elif queue == 'y_pred':
         y_pred_data.append(data)
 
-    # Проверяем совпадение id и записываем результат в файл
+    # Проверяем совпадение id, если совпадает записываем результат в файл и отправляем в очередь "plot"
     for true_item in y_true_data:
         for pred_item in y_pred_data:
             if true_item['id'] == pred_item['id']:
@@ -20,6 +20,9 @@ def callback(ch, method, properties, body):
                 with open('./logs/metric_log.csv', 'a', newline='') as csvfile:
                     csvwriter = csv.writer(csvfile)
                     csvwriter.writerow(answer_string)
+                channel.basic_publish(exchange='',
+                        routing_key='plot',
+                        body=json.dumps(answer_string))
                 # Удаляем обработанные элементы из списков
                 y_true_data.remove(true_item)
                 y_pred_data.remove(pred_item)
@@ -34,6 +37,8 @@ try:
     channel.queue_declare(queue='y_true')
     # Объявляем очередь y_pred
     channel.queue_declare(queue='y_pred')
+    # Объявляем очередь y_pred
+    channel.queue_declare(queue='plot')
 
     y_true_data = []
     y_pred_data = []
